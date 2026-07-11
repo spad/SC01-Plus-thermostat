@@ -1,0 +1,10 @@
+# macOS
+.DS_Store
+
+# Editor / IDE
+.vscode/
+.idea/
+
+# Build artifacts (firmware phase — added later as needed)
+build/
+.pio/
