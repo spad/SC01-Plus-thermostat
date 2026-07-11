@@ -40,8 +40,11 @@ for the owner (experienced MCU/FW/DIY engineer).
 
 ### Current phase
 
-**Phase 0 — UI concept (gate).** Produce a couple of screens in Penpot to decide
-whether the result is good enough to commit to the full project. UI outcome drives go/no-go.
+**Phase 0 — UI concept (gate): direction approved.** The Main screen was built as a PoC in
+Penpot in the **Holo HUD** direction; the owner approved it as a proof of concept (kept at PoC
+level, deliberately not productized). See [design notes](docs/design-notes.md) and the
+[roadmap](docs/roadmap.md). Next natural steps (if proceeding): the WiFi config screen, then
+Phase 1 firmware/HA.
 
 ## Working conventions
 
@@ -64,6 +67,7 @@ whether the result is good enough to commit to the full project. UI outcome driv
 - [Roadmap](docs/roadmap.md) — phases, done / to do.
 - [To-do](docs/todo.md) — actionable backlog.
 - [Priorities](docs/priorities.md) — current focus and ordering.
+- [Design notes](docs/design-notes.md) — Penpot UI: tokens, screen structure, fonts, MCP gotchas.
 - [Glossary](docs/glossary.md) — domain terms.
 - [ADR index](docs/adr/README.md) — architectural decisions.
   - [0001 — Hardware: SC01-Plus](docs/adr/0001-hardware-sc01-plus.md)
@@ -72,3 +76,4 @@ whether the result is good enough to commit to the full project. UI outcome driv
   - [0004 — Actuation: 2-way relay](docs/adr/0004-actuation-2-way-relay.md)
   - [0005 — HA connection method](docs/adr/0005-ha-connection-method.md) — **open**
   - [0006 — Screen orientation & resolution](docs/adr/0006-orientation-and-resolution.md)
+  - [0007 — Aesthetic direction: Holo HUD](docs/adr/0007-aesthetic-direction-holo-hud.md)

@@ -3,30 +3,28 @@
 Actionable backlog. Keep small and concrete. Move items to the roadmap phases as they
 grow. Check off or delete when done.
 
-## Now (Phase 0 — UI)
+## Done (Phase 0 — UI PoC)
 
-- [ ] Confirm sci-fi / hi-tech direction with reference examples before designing.
-- [ ] Create Penpot design foundation (tokens: color, typography, spacing, radius).
-- [ ] Design Main screen (see requirements below).
-- [ ] Design WiFi config screen.
-- [ ] Visual self-review + present for go/no-go.
+- [x] Sci-fi direction chosen: **Holo HUD** (cold/cyan).
+- [x] Penpot token foundation (sets `primitives` + `semantic`).
+- [x] Main screen PoC built (radial dot-ring gauge, controls, HUD background).
+- [x] `IconButton` reusable component.
+- [x] Fonts: display = Chakra Petch, UI = Inter Tight (see font note below).
+- [x] Penpot design version saved ("PoC — main screen v3 (Holo HUD)").
 
-## Main screen — required elements
+## Deferred (only if the project proceeds beyond PoC)
 
-- [ ] Detected (room) temperature — source: HA sensors.
-- [ ] Target temperature.
-- [ ] Mode: heat / cool (aka summer / winter).
-- [ ] Toolbar: WiFi connection status, time, day.
-- [ ] Override action (turn heating/cooling on/off manually — the primary interaction).
-
-## WiFi config screen — required elements
-
-- [ ] Network selection / SSID entry.
-- [ ] Password entry (on-screen keyboard, capacitive touch).
-- [ ] Connection status / feedback.
+- [ ] **WiFi config screen** (second required screen).
+- [ ] Alternative aesthetic variants: LCARS Modern, Phosphor.
+- [ ] Active-heating indicator (pulse when relay is actuating).
+- [ ] Temperature telemetry mini bar-chart (last hours).
+- [ ] Navigation / settings entry point for multi-page (gear icon).
+- [ ] Drag-on-arc setpoint control (touch).
+- [ ] Revisit fonts — none delighted the owner; consider uploading a custom sci-fi
+      font to the Penpot instance if "the one" is found.
 
 ## Open questions to resolve later
 
 - [ ] HA connection method — ESPHome vs custom firmware ([ADR-0005](adr/0005-ha-connection-method.md)).
-- [ ] Additional screens / data not yet remembered by the owner ("andiamo per ordine").
-- [ ] Humidity? secondary sensors? (unconfirmed — do not assume.)
+- [ ] Humidity source in HA (shown in UI as 48% placeholder — confirm real sensor).
+- [ ] Local sensor on device? (unconfirmed — do not assume.)

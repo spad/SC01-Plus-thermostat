@@ -13,3 +13,4 @@ Status values: `proposed` · `accepted` · `open` (decide later) · `superseded`
 | [0004](0004-actuation-2-way-relay.md) | Actuation: single 2-way relay | accepted |
 | [0005](0005-ha-connection-method.md) | HA connection method (ESPHome vs custom FW) | **open** |
 | [0006](0006-orientation-and-resolution.md) | Screen orientation & resolution | accepted |
+| [0007](0007-aesthetic-direction-holo-hud.md) | Aesthetic direction: Holo HUD | accepted |

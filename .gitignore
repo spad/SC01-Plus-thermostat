@@ -5,6 +5,9 @@
 .vscode/
 .idea/
 
+# Claude Code local/personal settings (not for a public repo)
+.claude/settings.local.json
+
 # Build artifacts (firmware phase — added later as needed)
 build/
 .pio/
