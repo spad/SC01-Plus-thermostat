@@ -1,6 +1,6 @@
 # ADR-0005 — HA connection method (ESPHome vs custom firmware)
 
-**Status:** open (decide later — does not block Phase 0 UI)
+**Status:** decided — **ESPHome** (2026-07-11).
 
 ## Context
 
@@ -26,11 +26,28 @@ trade-off between integration effort and UI freedom.
 
 ## Decision
 
-**Not yet decided.** Deferred until after the Phase 0 UI concept, because the chosen visual
-design informs how demanding the rendering requirements are — which is the deciding factor
-between A and B.
+**Option A — ESPHome (with the LVGL component).**
 
-## Consequences (of deferring)
+Rationale, now that the Phase 0 UI is locked (Holo HUD):
 
-- Phase 0 UI mockups in Penpot are designed to be valid for **either** option.
-- Decision to be revisited once the UI direction is locked.
+- **Architectural fit.** The device is a thin client and HA is the brain
+  ([ADR-0003](0003-ha-brain-no-on-device-scheduling.md)). That *is* the ESPHome model:
+  the device exposes entities, HA owns the logic. ESPHome is aligned, not merely convenient.
+- **Rendering is not a blocker.** The "glow/bloom" of the Holo HUD is baked into pre-rendered
+  image assets in either option, so it does not differentiate A from B. ESPHome's LVGL (v9)
+  covers the rest. The WT32-SC01 Plus is a first-class target: `mipi_spi` platform with
+  `model: wt32-sc01-plus` drives the ST7796 (8-bit parallel bus as octal SPI) with hardware
+  rotation; touch via `ft63x6`.
+- **Free plumbing.** Native HA API + auto-discovery, OTA, and WiFi provisioning
+  (captive portal / Improv) come for free — code we would otherwise hand-write in Option B.
+
+If a bespoke visual later exceeds YAML-LVGL, the escape hatch is raw LVGL via a lambda /
+custom component *inside* the ESPHome shell — keeping all the connectivity benefits.
+
+## Consequences
+
+- **No custom WiFi config screen needed** — `captive_portal` handles provisioning. The Phase 0
+  "WiFi config screen" deliverable is dropped.
+- Firmware config lives in the ESPHome add-on; mirrored in `firmware/` (see its README).
+- Phase 1 proceeds on ESPHome: base flashed over the prior firmware, then display/touch, then
+  the LVGL Holo HUD build.

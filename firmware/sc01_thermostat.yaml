@@ -1,0 +1,568 @@
+# SC01-Plus thermostat — ESPHome device config (Phase 1 base).
+#
+# Toolchain: ESPHome add-on inside Home Assistant. This file is the versioned
+# mirror; the working copy lives in the add-on. Secrets (WiFi, API key, OTA
+# password) live in the add-on's own secrets.yaml and are NOT in this repo
+# (repo is public). See firmware/README.md and firmware/secrets.yaml.example.
+
+# Enable logging
+logger:
+
+substitutions:
+  device_name: sc01_thermostat
+  friendly_name: thermostat_sala
+  #device_ip: 192.168.x.x
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+  # Enable ccache: on the esp-idf/CMake backend this wraps the compiler as a
+  # launcher, so unchanged objects become cache hits instead of recompiles.
+  # Requires `ccache` on the build host (`brew install ccache`). The cache lives
+  # at ~/.cache/ccache and is shared across builds AND devices on the same host
+  # (build one SC01, the other identical ones hit the cache).
+  environment_variables:
+    IDF_CCACHE_ENABLE: "1"
+  platformio_options:
+    board_build.flash_mode: dio
+
+esp32:
+  board: esp32-s3-devkitc-1
+  variant: esp32s3
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      COMPILER_OPTIMIZATION_SIZE: y
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: "y"
+      CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
+      CONFIG_ESP32S3_DATA_CACHE_LINE_64B: "y"
+      CONFIG_SPIRAM_FETCH_INSTRUCTIONS: y
+      CONFIG_SPIRAM_RODATA: y
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+api:
+  reboot_timeout: 15min
+  encryption:
+    key: !secret secre_key
+ota:
+  - platform: esphome
+    password: !secret ota_password
+  - platform: web_server
+#  id: my_ota
+
+wifi:
+  networks:
+  - ssid: !secret wifi_ssid
+    password: !secret wifi_password
+  ap:
+    ssid: AP_${device_name}
+    password: !secret fallback_ssid_password
+
+captive_portal:
+
+web_server:
+  port: 80
+
+esp32_ble_tracker:
+  max_connections: 3
+  scan_parameters:
+    interval: 300ms
+    window: 100ms
+    active: true
+
+bluetooth_proxy:
+  active: true
+
+sensor:
+  # Room climate — read from Home Assistant, shown on the display only.
+  - platform: homeassistant
+    id: room_temp
+    entity_id: sensor.sensore_ambiente_sala_temperature
+    on_value:
+      - lvgl.label.update:
+          id: lbl_room_temp
+          text:
+            format: "%.1f°"
+            args: [ 'x' ]
+  - platform: homeassistant
+    id: room_humidity
+    entity_id: sensor.sensore_ambiente_sala_humidity
+    on_value:
+      - lvgl.label.update:
+          id: lbl_humidity
+          text:
+            format: "%.0f%%"
+            args: [ 'x' ]
+
+number:
+  # Display Backlight Brightness Adjust
+  - platform: template
+    name: "BackLight Brightness"
+    optimistic: true
+    id: backlight_brightness
+    icon: mdi:brightness-percent
+    unit_of_measurement: "%"
+    initial_value: 80
+    restore_value: true
+    min_value: 5
+    max_value: 100
+    step: 5
+    mode: slider
+
+  # Target temperature (setpoint) — device-owned, exposed to HA. The ± buttons
+  # and HA can both set it; it drives the target readout and the gauge fill.
+  - platform: template
+    name: "Target Temperature"
+    id: target_temperature
+    optimistic: true
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer
+    initial_value: 22
+    restore_value: true
+    min_value: 5
+    max_value: 35
+    step: 0.5
+    mode: box
+    on_value:
+      - lvgl.label.update:
+          id: lbl_target_temp
+          text:
+            format: "%.1f°"
+            args: [ 'x' ]
+      - lvgl.indicator.update:
+          id: gauge_fill
+          end_value: !lambda "return (int) x;"
+
+select:
+  # HVAC mode (heat/cool) — device-owned, exposed to HA. Button cycles it.
+  - platform: template
+    name: "HVAC Mode"
+    id: hvac_mode
+    optimistic: true
+    restore_value: true
+    options:
+      - "Cool"
+      - "Heat"
+    initial_option: "Cool"
+    on_value:
+      - lvgl.label.update:
+          id: lbl_mode
+          text: !lambda "return x;"
+      - if:
+          condition:
+            lambda: 'return x == "Heat";'
+          then:
+            - lvgl.label.update:
+                id: lbl_mode
+                text_color: mode_heat
+            - lvgl.widget.update:
+                id: btn_mode
+                border_color: mode_heat
+          else:
+            - lvgl.label.update:
+                id: lbl_mode
+                text_color: mode_cool
+            - lvgl.widget.update:
+                id: btn_mode
+                border_color: mode_cool
+
+switch:
+  # Manual override on/off — device-owned, exposed to HA. Button toggles it.
+  - platform: template
+    name: "Override"
+    id: override_switch
+    icon: mdi:hand-back-right
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    turn_on_action:
+      - lvgl.widget.update:
+          id: btn_override
+          state:
+            checked: true
+    turn_off_action:
+      - lvgl.widget.update:
+          id: btn_override
+          state:
+            checked: false
+
+script:
+  # Screen Light Script
+  - id: turn_on_screen_light
+    mode: restart
+    then:
+      - lvgl.resume:
+      - light.turn_on:
+          id: backlight
+          brightness: !lambda return id(backlight_brightness).state / 100;
+          transition_length: 1s
+
+output:
+  - platform: ledc
+    id: backlight_pwm
+    pin:
+      number: GPIO45
+      ignore_strapping_warning: true
+
+light:
+  - platform: monochromatic
+    id: backlight
+    name: Backlight
+    output: backlight_pwm
+    icon: mdi:brightness-percent
+    default_transition_length: 500ms
+    restore_mode: RESTORE_AND_ON
+    on_turn_on:
+      then:
+        - script.execute: turn_on_screen_light
+    on_turn_off:
+      then:
+        - lvgl.pause:
+
+i2c:
+  frequency: 400kHz
+  sda: 6
+  scl: 5
+
+touchscreen:
+  - platform: ft63x6
+    id: my_touchscreen
+    display: my_display
+    interrupt_pin: 7
+    # No transform: LVGL rotation (below) auto-rotates touch coordinates too.
+    # Re-add a specific mirror here only if touch ends up misregistered on device.
+
+spi:
+  - type: octal
+    id: octal_spi
+    clk_pin: 47
+    data_pins:
+      - 9
+      - ignore_strapping_warning: true
+        number: 46
+      - ignore_strapping_warning: true
+        number: 3
+      - 8
+      - 18
+      - 17
+      - 16
+      - 15
+
+display:
+  - platform: mipi_spi
+    id: my_display
+    model: wt32-sc01-plus
+    data_rate: 10MHz
+    # rotation lives in the lvgl block (required by ESPHome LVGL v9);
+    # wt32-sc01-plus rotates in hardware, so it stays fast.
+
+# -------------------
+# LVGL UI
+# -------------------
+font:
+  # Fetched from Google Fonts at build time (gfonts://) — no local TTF files.
+  # Display/readout = Antonio (owner's preference). UI/labels = Inter Tight (not
+  # yet seen on screen — flip to Antonio too if wanted once labels are visible).
+  # Display fonts carry the degree glyph explicitly (° is outside default ASCII).
+  - file: "gfonts://Antonio@700"
+    id: font_huge
+    size: 64
+    glyphs: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ".", ":", "-", "°", " "]
+  - file: "gfonts://Antonio@600"
+    id: font_header
+    size: 36
+    glyphs: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ".", ":", "-", "°", " "]
+  - file: "gfonts://Inter Tight@500"
+    id: font_ui
+    size: 20
+
+color:
+  # Role-based (agnostic) ids. Values are the decided Holo HUD tokens
+  # (dark-only) — see docs/design-notes.md. heat = amber, cool = cyan.
+  - id: bg_base        # screen background
+    hex: 060A0F
+  - id: bg_surface     # panels / cards
+    hex: 0E141C
+  - id: bg_raised      # raised surfaces
+    hex: 16202B
+  - id: border_subtle
+    hex: 22303F
+  - id: text_primary
+    hex: DCEAF7
+  - id: text_muted
+    hex: 6E8299
+  - id: accent         # primary accent (cyan)
+    hex: 33E1FF
+  - id: mode_cool      # cool mode = cyan
+    hex: 33E1FF
+  - id: mode_heat      # heat mode = amber
+    hex: FF8A3D
+
+lvgl:
+  rotation: 90
+  default_font: font_ui
+  pages:
+    - id: main_page # Default page
+      widgets:
+        # Full-screen dark canvas. Covers LVGL's default white background and
+        # sits exactly at 480x320 so the screen never scrolls (no scrollbars).
+        - obj:
+            id: root
+            x: 0
+            y: 0
+            width: 100%
+            height: 100%
+            bg_color: bg_base
+            bg_opa: COVER
+            border_width: 0
+            radius: 0
+            pad_all: 10
+            scrollbar_mode: "OFF"
+            # Main screen. Vertical flex: toolbar on top, main row below.
+            # Main row (flex): left controls · meter gauge + readout · right
+            # controls. HUD glow/ring background is a later step (needs image
+            # assets). Values are placeholders until bound to HA entities.
+            layout:
+              type: flex
+              flex_flow: COLUMN
+              flex_align_main: START
+              flex_align_cross: CENTER
+              pad_row: 8
+            widgets:
+              # --- Toolbar (top row): wifi/time left · humidity/day right ---
+              - obj:
+                  id: toolbar
+                  width: 100%
+                  height: 34
+                  bg_opa: TRANSP
+                  border_width: 0
+                  pad_all: 4
+                  layout:
+                    type: flex
+                    flex_flow: ROW
+                    flex_align_main: SPACE_BETWEEN
+                    flex_align_cross: CENTER
+                  widgets:
+                    # left group: wifi icon + time
+                    - obj:
+                        width: SIZE_CONTENT
+                        height: SIZE_CONTENT
+                        bg_opa: TRANSP
+                        border_width: 0
+                        pad_all: 0
+                        layout:
+                          type: flex
+                          flex_flow: ROW
+                          flex_align_cross: CENTER
+                          pad_column: 8
+                        widgets:
+                          - label:
+                              text: "\uF1EB"   # LV_SYMBOL_WIFI
+                              text_color: accent
+                              text_font: montserrat_20
+                          - label:
+                              id: lbl_time
+                              text: "14:32"
+                              text_color: text_primary
+                              text_font: font_ui
+                    # right group: humidity + day
+                    - obj:
+                        width: SIZE_CONTENT
+                        height: SIZE_CONTENT
+                        bg_opa: TRANSP
+                        border_width: 0
+                        pad_all: 0
+                        layout:
+                          type: flex
+                          flex_flow: ROW
+                          flex_align_cross: CENTER
+                          pad_column: 6
+                        widgets:
+                          - label:
+                              text: "\uF043"   # LV_SYMBOL_TINT (humidity drop)
+                              text_color: text_muted
+                              text_font: montserrat_20
+                          - label:
+                              id: lbl_humidity
+                              text: "48%"
+                              text_color: text_primary
+                              text_font: font_ui
+                          - label:
+                              id: lbl_day
+                              text: "MON"
+                              text_color: text_muted
+                              text_font: font_ui
+              # --- Main row: col-left · gauge · col-right ---
+              - obj:
+                  id: main_row
+                  width: 100%
+                  flex_grow: 1
+                  bg_opa: TRANSP
+                  border_width: 0
+                  pad_all: 0
+                  scrollbar_mode: "OFF"
+                  layout:
+                    type: flex
+                    flex_flow: ROW
+                    flex_align_main: SPACE_BETWEEN
+                    flex_align_cross: CENTER
+                  widgets:
+                    # left controls: − (decrease) and mode
+                    - obj:
+                        id: col_left
+                        width: 76
+                        height: 100%
+                        bg_opa: TRANSP
+                        border_width: 0
+                        pad_all: 0
+                        scrollbar_mode: "OFF"
+                        layout:
+                          type: flex
+                          flex_flow: COLUMN
+                          flex_align_main: SPACE_EVENLY
+                          flex_align_cross: CENTER
+                          flex_align_track: CENTER
+                        widgets:
+                          - button:
+                              id: btn_minus
+                              width: 58
+                              height: 58
+                              radius: 29
+                              bg_color: bg_raised
+                              bg_opa: COVER
+                              border_width: 1
+                              border_color: border_subtle
+                              text: "\uF068"   # LV_SYMBOL_MINUS
+                              text_color: text_primary
+                              text_font: montserrat_28
+                              pressed:
+                                bg_color: bg_surface
+                                border_color: accent
+                              on_short_click:
+                                - number.set:
+                                    id: target_temperature
+                                    value: !lambda "return id(target_temperature).state - 0.5;"
+                          - button:
+                              id: btn_mode
+                              width: 58
+                              height: 44
+                              radius: 10
+                              bg_color: bg_raised
+                              bg_opa: COVER
+                              border_width: 1
+                              border_color: mode_cool
+                              on_short_click:
+                                - select.set:
+                                    id: hvac_mode
+                                    option: !lambda 'return id(hvac_mode).state == "Cool" ? "Heat" : "Cool";'
+                              widgets:
+                                - label:
+                                    id: lbl_mode
+                                    text: "COOL"
+                                    text_color: mode_cool
+                                    text_font: font_ui
+                    # center gauge: meter ring (44 ticks, cyan up to target) + readout overlay
+                    - obj:
+                        id: gauge
+                        width: 200
+                        height: 100%
+                        bg_opa: TRANSP
+                        border_width: 0
+                        pad_all: 0
+                        scrollbar_mode: "OFF"
+                        widgets:
+                          - meter:
+                              id: gauge_meter
+                              align: CENTER
+                              width: 200
+                              height: 200
+                              bg_opa: TRANSP
+                              border_width: 0
+                              scales:
+                                range_from: 5
+                                range_to: 35
+                                angle_range: 270
+                                rotation: 135
+                                ticks:
+                                  count: 44
+                                  width: 3
+                                  length: 10
+                                  color: border_subtle
+                                indicators:
+                                  - arc:
+                                      id: gauge_fill
+                                      color: accent
+                                      start_value: 5
+                                      end_value: 22
+                                      width: 10
+                                      rounded: true
+                          - label:
+                              id: lbl_room_temp
+                              align: CENTER
+                              y: -20
+                              text: "21.4°"
+                              text_color: text_primary
+                              text_font: font_huge
+                          - label:
+                              id: lbl_target_temp
+                              align: CENTER
+                              y: 34
+                              text: "22.0°"
+                              text_color: accent
+                              text_font: font_header
+                    # right controls: + (increase) and override toggle
+                    - obj:
+                        id: col_right
+                        width: 76
+                        height: 100%
+                        bg_opa: TRANSP
+                        border_width: 0
+                        pad_all: 0
+                        scrollbar_mode: "OFF"
+                        layout:
+                          type: flex
+                          flex_flow: COLUMN
+                          flex_align_main: SPACE_EVENLY
+                          flex_align_cross: CENTER
+                          flex_align_track: CENTER
+                        widgets:
+                          - button:
+                              id: btn_plus
+                              width: 58
+                              height: 58
+                              radius: 29
+                              bg_color: bg_raised
+                              bg_opa: COVER
+                              border_width: 1
+                              border_color: border_subtle
+                              text: "\uF067"   # LV_SYMBOL_PLUS
+                              text_color: text_primary
+                              text_font: montserrat_28
+                              pressed:
+                                bg_color: bg_surface
+                                border_color: accent
+                              on_short_click:
+                                - number.set:
+                                    id: target_temperature
+                                    value: !lambda "return id(target_temperature).state + 0.5;"
+                          - button:
+                              id: btn_override
+                              width: 58
+                              height: 44
+                              radius: 10
+                              bg_color: bg_raised
+                              bg_opa: COVER
+                              border_width: 1
+                              border_color: border_subtle
+                              text: "\uF011"   # LV_SYMBOL_POWER
+                              text_color: text_muted
+                              text_font: montserrat_20
+                              on_short_click:
+                                - switch.toggle: override_switch
+                              checked:
+                                bg_color: accent
+                                text_color: bg_base
+                                border_color: accent

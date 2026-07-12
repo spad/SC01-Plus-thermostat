@@ -11,3 +11,7 @@
 # Build artifacts (firmware phase — added later as needed)
 build/
 .pio/
+
+# ESPHome secrets — real values live in the HA add-on, never in this public repo
+secrets.yaml
+firmware/secrets.yaml

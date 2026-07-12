@@ -40,11 +40,15 @@ for the owner (experienced MCU/FW/DIY engineer).
 
 ### Current phase
 
-**Phase 0 — UI concept (gate): direction approved.** The Main screen was built as a PoC in
-Penpot in the **Holo HUD** direction; the owner approved it as a proof of concept (kept at PoC
-level, deliberately not productized). See [design notes](docs/design-notes.md) and the
-[roadmap](docs/roadmap.md). Next natural steps (if proceeding): the WiFi config screen, then
-Phase 1 firmware/HA.
+**Phase 1 — Firmware & HA integration (in progress).** HA connection: **ESPHome**
+([ADR-0005](docs/adr/0005-ha-connection-method.md)), flashed over the prior Bruce firmware;
+display + touch working. The LVGL **Holo HUD Main** screen is built and verified on device
+(toolbar, `meter` gauge with cyan `arc` fill, −/+/mode/override controls). HA integration is
+wired ([ADR-0008](docs/adr/0008-device-ha-entity-model.md)): temp + humidity imported from HA;
+device-owned `number` (target), `select` (mode), `switch` (override) exposed to HA — **pending
+on-device verification**. Config + details in [`firmware/`](firmware/). Open: OTA fails on this
+node (mDNS/underscore); relay actuation logic; HUD background assets. See
+[design notes](docs/design-notes.md), the [roadmap](docs/roadmap.md), and [`firmware/README`](firmware/README.md).
 
 ## Working conventions
 
@@ -68,12 +72,14 @@ Phase 1 firmware/HA.
 - [To-do](docs/todo.md) — actionable backlog.
 - [Priorities](docs/priorities.md) — current focus and ordering.
 - [Design notes](docs/design-notes.md) — Penpot UI: tokens, screen structure, fonts, MCP gotchas.
+- [`firmware/`](firmware/) — ESPHome device config (Phase 1) + its README.
 - [Glossary](docs/glossary.md) — domain terms.
 - [ADR index](docs/adr/README.md) — architectural decisions.
   - [0001 — Hardware: SC01-Plus](docs/adr/0001-hardware-sc01-plus.md)
   - [0002 — External temperature sensing](docs/adr/0002-external-temperature-sensor.md)
   - [0003 — HA as brain, no on-device scheduling](docs/adr/0003-ha-brain-no-on-device-scheduling.md)
   - [0004 — Actuation: 2-way relay](docs/adr/0004-actuation-2-way-relay.md)
-  - [0005 — HA connection method](docs/adr/0005-ha-connection-method.md) — **open**
+  - [0005 — HA connection method](docs/adr/0005-ha-connection-method.md) — **ESPHome**
   - [0006 — Screen orientation & resolution](docs/adr/0006-orientation-and-resolution.md)
   - [0007 — Aesthetic direction: Holo HUD](docs/adr/0007-aesthetic-direction-holo-hud.md)
+  - [0008 — Device ↔ HA entity model](docs/adr/0008-device-ha-entity-model.md)

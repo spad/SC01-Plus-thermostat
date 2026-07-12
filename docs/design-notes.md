@@ -36,6 +36,11 @@ text `#DCEAF7` / muted `#6E8299`, cyan accent `#33E1FF`, amber heat `#FF8A3D`.
   none delighted; revisit possible (can upload a custom font to the instance).
 - UI / labels: **Inter Tight**.
 - The instance has ~1911 fonts available.
+- **Firmware note:** on the device (ESPHome LVGL) the display font is **Antonio**
+  (owner's preference, chosen while building the real screen), not Chakra Petch — so the
+  Penpot PoC and the firmware diverge on the readout typeface. UI labels stay Inter Tight.
+  Firmware UI specifics (LVGL structure, gauge, fonts, build model) live in
+  [`firmware/README`](../firmware/README.md).
 
 ## Main screen structure (board `main-thermostat`, 480×320)
 
